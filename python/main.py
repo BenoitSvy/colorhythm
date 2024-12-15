@@ -107,4 +107,4 @@ def main(virtual_port_name, video_path, camera_source):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main(virtual_port_name="loopMIDI Port", video_path="project/vid3.mp4", camera_source=0) 
+    main(virtual_port_name="loopMIDI Port", video_path="python/vid3.mp4", camera_source=0) 

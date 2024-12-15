@@ -37,8 +37,6 @@ The project consists of four main files, each playing a crucial role in the over
 
    ```sh
    git clone https://github.com/BenoitSvy/colorythm.git
-   cd project
-
    ```
 
 2. **Install dependencies**:
@@ -66,7 +64,7 @@ The project consists of four main files, each playing a crucial role in the over
 
         python main.py
 
-        Ensure your webcam is connected and the video file (e.g., project/vid3.mp4) is available.
+        Ensure your webcam is connected and the video file (e.g., python/vid3.mp4) is available.
 
 3.  **Interact with the System**:
 

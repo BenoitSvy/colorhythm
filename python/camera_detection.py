@@ -508,7 +508,7 @@ def main(webcam_source, board_source, virtual_port_name):
     """Fonction principale pour la détection et le traitement
     Args:
         webcam_source: Source de la webcam (défaut: 0)
-        board_source: Source de la vidéo du plateau (défaut: "project/vid3.mp4")
+        board_source: Source de la vidéo du plateau (défaut: "python/vid3.mp4")
         virtual_port_name: Nom du port MIDI virtuel (défaut: "loopMIDI Port")
     """
     # Initialisation des deux sources vidéo

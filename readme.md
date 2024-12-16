@@ -1,8 +1,8 @@
-# Colorythm: Turning Vision into Music
+# Colorhythm: Turning Vision into Music
 
 ## Overview
 
-Colorythm is a dynamic music control system that integrates computer vision and MIDI signals to create an interactive music experience. The system captures hand movements and colored circles from a video feed, processes these inputs, and sends corresponding MIDI signals to control music software like Ableton Live.
+Colorhythm is a dynamic music control system that integrates computer vision and MIDI signals to create an interactive music experience. The system captures hand movements and colored circles from a video feed, processes these inputs, and sends corresponding MIDI signals to control music software like Ableton Live.
 
 ## Features
 
@@ -36,7 +36,7 @@ The project consists of four main files, each playing a crucial role in the over
 1. **Clone the repository**:
 
    ```sh
-   git clone https://github.com/BenoitSvy/colorythm.git
+   git clone https://github.com/BenoitSvy/colorhythm.git
    ```
 
 2. **Install dependencies**:

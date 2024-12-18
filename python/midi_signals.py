@@ -1,6 +1,8 @@
 import mido
 from mido import Message
 import time
+import os
+from mido import MidiFile, MidiTrack, Message
 
 # Constantes MIDI CC pour le tracking des mains
 THUMB_INDEX_DISTANCE_CC_LEFT = 7   # Distance pouce-index main gauche
@@ -156,6 +158,85 @@ def check_midi_port(port_name="loopMIDI Port"):
     except Exception as e:
         print(f"\nErreur lors de la recherche des ports MIDI: {str(e)}")
         return None
+
+def save_midi_matrix(matrix, bpm=85):
+    """
+    Sauvegarde la matrice MIDI dans un fichier, écrase le fichier précédent
+    """
+    try:
+        # Créer un nouveau fichier MIDI
+        mid = MidiFile(ticks_per_beat=500)
+        track = MidiTrack()
+        mid.tracks.append(track)
+
+        # Trier la matrice par temps de début
+        matrix.sort(key=lambda x: x[2])
+        
+        print(f"\n[{time.strftime('%H:%M:%S')}] Création du fichier MIDI...")
+        print(f"- Nombre de notes : {len(matrix)}")
+        print("- Notes détectées :")
+        
+        # Calculer la durée d'une noire en secondes
+        beat_duration = 60 / bpm
+        
+        # Convertir les durées en secondes
+        converted_matrix = []
+        for note in matrix:
+            pitch, velocity, start_time, duration = note
+            # Convertir start_time et duration en secondes
+            start_sec = start_time * beat_duration/2
+            duration_sec = duration * beat_duration/2
+            converted_matrix.append([pitch, velocity, start_sec, duration_sec])
+            print(f"  → Note {pitch} (vélocité: {velocity}) à t={start_sec:.2f}s, durée={duration_sec:.2f}s")
+
+        # Variable pour suivre le temps actuel
+        current_time = 0
+
+        # Créer la liste des événements (note_on et note_off)
+        all_events = []
+        for note in converted_matrix:
+            pitch, velocity, start_time, duration = note
+            all_events.append((start_time, 'note_on', pitch, velocity))
+            all_events.append((start_time + duration, 'note_off', pitch, velocity))
+
+        # Trier tous les événements par temps
+        all_events.sort(key=lambda x: x[0])
+        print(f"- Nombre total d'événements MIDI : {len(all_events)}")
+
+        # Convertir les temps en ticks MIDI
+        ticks_per_second = mid.ticks_per_beat * (bpm / 60)
+        
+        # Ajouter les événements à la piste
+        for event_time, event_type, pitch, velocity in all_events:
+            # Calculer le temps relatif en ticks
+            relative_time = event_time - current_time
+            ticks = int(relative_time * ticks_per_second)
+            
+            # Ajouter l'événement à la piste
+            track.append(Message(event_type, note=pitch, velocity=velocity, time=ticks))
+            
+            # Mettre à jour le temps actuel
+            current_time = event_time
+
+        # Créer le dossier data s'il n'existe pas
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+
+        # Utiliser un nom fixe pour le fichier
+        output_file_path = os.path.join(data_dir, 'sequence.mid')
+        
+        # Sauvegarder le fichier MIDI
+        mid.save(output_file_path)
+        
+        print(f"[{time.strftime('%H:%M:%S')}] Fichier MIDI créé avec succès")
+        print(f"- Chemin : {output_file_path}")
+        print(f"- Durée totale : {current_time:.2f} secondes")
+        print(f"- BPM : {bpm}")
+        return True
+
+    except Exception as e:
+        print(f"\n[{time.strftime('%H:%M:%S')}] Erreur lors de la création du fichier MIDI: {str(e)}")
+        return False
 
 if __name__ == "__main__":
     # Test avec une matrice simple

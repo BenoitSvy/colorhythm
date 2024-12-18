@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import mediapipe as mp
-from midi_signals import send_midi_matrix, send_hand_controls
+from midi_signals import send_midi_matrix, send_hand_controls, save_midi_matrix
 from collections import deque
 import time
 
@@ -11,7 +11,7 @@ point_grid = np.array([[[1/9,1/5],[2/9,1/5],[3/9,1/5],[4/9,1/5],[5/9,1/5],[6/9,1
                      [[1/9,3/5],[2/9,3/5],[3/9,3/5],[4/9,3/5],[5/9,3/5],[6/9,3/5],[7/9,3/5],[8/9,3/5]],
                      [[1/9,4/5],[2/9,4/5],[3/9,4/5],[4/9,4/5],[5/9,4/5],[6/9,4/5],[7/9,4/5],[8/9,4/5]]])
 
-pitch_row = {0: 60, 1: 62, 2: 63, 3: 65}
+pitch_row = {0: 65, 1: 64, 2: 62, 3: 60}
 
 # Initialisation de MediaPipe Hands
 mp_hands = mp.solutions.hands
@@ -66,8 +66,8 @@ thumb_index_left_scaler = FixedScaler(min_value=0.05, max_value=0.3)
 thumb_index_right_scaler = FixedScaler(min_value=0.05, max_value=0.3)
 left_pinky_scaler = FixedScaler(min_value=0.0, max_value=0.15)
 right_pinky_scaler = FixedScaler(min_value=0.0, max_value=0.15)
-two_hands_index_scaler = FixedScaler(min_value=0.1, max_value=0.50)
-two_hands_thumb_scaler = FixedScaler(min_value=0.1, max_value=0.50)
+two_hands_index_scaler = FixedScaler(min_value=0.1, max_value=0.40)
+two_hands_thumb_scaler = FixedScaler(min_value=0.1, max_value=0.40)
 
 def draw_progress_bar(img, label, value, y_pos, color):
     """Dessine une barre de progression avec label et valeur"""
@@ -504,13 +504,8 @@ def arrange_windows():
         }
     }
 
-def main(webcam_source, board_source, virtual_port_name):
-    """Fonction principale pour la détection et le traitement
-    Args:
-        webcam_source: Source de la webcam (défaut: 0)
-        board_source: Source de la vidéo du plateau (défaut: "python/vid3.mp4")
-        virtual_port_name: Nom du port MIDI virtuel (défaut: "loopMIDI Port")
-    """
+def main(webcam_source, board_source, virtual_port_name, live_midi=True, bpm=85):
+    """Fonction principale pour la détection et le traitement"""
     # Initialisation des deux sources vidéo
     hand_cap = cv2.VideoCapture(webcam_source)  # Source pour les mains
     board_cap = cv2.VideoCapture(board_source)  # Source pour le plateau
@@ -555,24 +550,34 @@ def main(webcam_source, board_source, virtual_port_name):
     last_valid_circles = None
 
     try:
-        while hand_cap.isOpened():
+        while True:  # Changé de hand_cap.isOpened() à True
             # Créer une nouvelle image de fond noire pour chaque frame
             display_frame = main_frame.copy()
             
-            # Lecture des deux sources
+            # Lecture des deux sources avec gestion d'erreur
             hand_ret, hand_frame = hand_cap.read()
             board_ret, board_frame = board_cap.read()
 
-            if not hand_ret:
-                print("Erreur: Impossible de lire la webcam")
-                break
+            # Vérifier si les caméras sont toujours connectées
+            if not hand_ret or not hand_cap.isOpened():
+                print("\nErreur: Webcam principale déconnectée")
+                print("Tentative de reconnexion...")
+                hand_cap.release()
+                hand_cap = cv2.VideoCapture(webcam_source)
+                if not hand_cap.isOpened():
+                    print("Échec de la reconnexion")
+                    break
+                continue
 
-            # Gérer la lecture en boucle de la vidéo du plateau
-            if not board_ret:
-                board_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                board_ret, board_frame = board_cap.read()
-                if not board_ret:
-                    continue
+            if not board_ret or not board_cap.isOpened():
+                print("\nErreur: Webcam du plateau déconnectée")
+                print("Tentative de reconnexion...")
+                board_cap.release()
+                board_cap = cv2.VideoCapture(board_source)
+                if not board_cap.isOpened():
+                    print("Échec de la reconnexion")
+                    break
+                continue
 
             # Traitement des mains pour les contrôles MIDI
             hand_frame, measurements_img = process_hands(hand_frame, output)
@@ -626,7 +631,11 @@ def main(webcam_source, board_source, virtual_port_name):
             display_frame[pos[1]:pos[1]+size[1], pos[0]:pos[0]+size[0]] = measurements_resized
 
             # Afficher la fenêtre principale
-            cv2.imshow('Chief Orchestra', display_frame)
+            try:
+                cv2.imshow('Chief Orchestra', display_frame)
+            except cv2.error as e:
+                print(f"\nErreur d'affichage: {e}")
+                break
             
             key = cv2.waitKey(delay) & 0xFF
             if key == ord('q'):
@@ -638,16 +647,27 @@ def main(webcam_source, board_source, virtual_port_name):
                     midi_matrix = get_midi_matrix(is_note)
                     print(f"\n[{time.strftime('%H:%M:%S')}] Circle Detection: {len(midi_matrix)} notes detected")
                     print_matrix(is_note, midi_matrix)
-                    if not send_midi_matrix(midi_matrix, output=output):
-                        print(f"[{time.strftime('%H:%M:%S')}] Échec de l'envoi de la séquence MIDI")
+                    
+                    if live_midi:
+                        if not send_midi_matrix(midi_matrix, output=output):
+                            print(f"[{time.strftime('%H:%M:%S')}] Échec de l'envoi de la séquence MIDI")
+                    else:
+                        if not save_midi_matrix(midi_matrix, bpm=bpm):
+                            print(f"[{time.strftime('%H:%M:%S')}] Échec de la création du fichier MIDI")
                 except Exception as e:
                     print(f"\n[{time.strftime('%H:%M:%S')}] Error: {str(e)}")
 
+    except Exception as e:
+        print(f"\nErreur inattendue: {str(e)}")
     finally:
-        hand_cap.release()
-        board_cap.release()
+        print("\nFermeture des ressources...")
+        if hand_cap is not None:
+            hand_cap.release()
+        if board_cap is not None:
+            board_cap.release()
         cv2.destroyAllWindows()
-        output.close()
+        if output is not None:
+            output.close()
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -65,9 +65,10 @@ def check_camera(camera_source):
     cap.release()
     return True
 
-def main(virtual_port_name, video_path, camera_source):
+def main(virtual_port_name, video_path, camera_source, live_midi=True, bpm=85):
     """Fonction principale"""
     print("Vérification de la configuration...")
+    print(f"BPM: {bpm}")
     
     # Vérifier toutes les dépendances et conditions
     checks = [
@@ -91,13 +92,17 @@ def main(virtual_port_name, video_path, camera_source):
     
     print("\nTout est prêt !")
     print("\nCommandes disponibles:")
-    print("- 'a' : Envoyer la séquence MIDI basée sur les cercles détectés")
+    if live_midi:
+        print("- 'a' : Envoyer la séquence MIDI basée sur les cercles détectés")
+    else:
+        print("- 'a' : Créer un fichier MIDI basé sur les cercles détectés")
     print("- 'q' : Quitter le programme")
     print("\nDémarrage du programme...")
     
     try:
         # Lancer le programme principal avec les paramètres
-        camera_main(webcam_source=camera_source, board_source=video_path, virtual_port_name=virtual_port_name)
+        camera_main(webcam_source=camera_source, board_source=video_path, 
+                   virtual_port_name=virtual_port_name, live_midi=live_midi, bpm=bpm)
     except KeyboardInterrupt:
         print("\nProgramme arrêté par l'utilisateur")
     except Exception as e:
@@ -107,4 +112,9 @@ def main(virtual_port_name, video_path, camera_source):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main(virtual_port_name="loopMIDI Port", video_path="python/vid3.mp4", camera_source=0) 
+    main(virtual_port_name="loopMIDI Port", 
+         video_path="data/video_board.mp4", 
+         camera_source=0, 
+         live_midi=False,
+         bpm=85)
+  
